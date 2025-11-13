@@ -47,4 +47,54 @@ def load_image(name, scale=None):
 
 try:
     bg_img = load_image("background.png", (WIDTH, HEIGHT))
-    
+   #Phan nay là kết nối client với serve
+               print(f"[DEBUG] Nhận từ server: {msg}")
+            if msg["action"] == "start":
+                state = "choosing"
+            elif msg["action"] == "result":
+                state = "result"
+                result = msg["result"]
+                opponent_choice = reverse_choice_map.get(msg["opponent"], msg["opponent"])
+                scores[result] += 1
+                print(f"[INFO] Kết quả: Bạn {'THẮNG' if result=='win' else 'THUA' if result=='lose' else 'HOÀ'} | Đối thủ chọn {opponent_choice}")
+
+
+                try:
+                    send_message({
+                        "action": "report_result",
+                        "your_choice": choice_map[choice],
+                        "opponent_choice": msg["opponent"],
+                        "result": result
+                    })
+                    print("[DEBUG] Đã gửi kết quả về server")
+                except:
+                    print("[ERROR] Không thể gửi kết quả về server")
+
+                if result == "win":
+                    win_sound.play()
+                elif result == "lose":
+                    lose_sound.play()
+                else:
+                    draw_sound.play()
+            elif msg["action"] == "opponent_disconnected":
+                state = "disconnected"
+                print("[INFO] Đối thủ đã thoát!")
+        except:
+            break
+
+threading.Thread(target=receive_messages, daemon=True).start()
+
+
+symbol_images = {"Kéo": scissors_img, "Búa": rock_img, "Bao": paper_img}
+
+def fade_in_out():
+    global fade_alpha
+    if state == "result":
+        fade_alpha = min(200, fade_alpha + 10)
+    else:
+        fade_alpha = max(0, fade_alpha - 10)
+
+def draw_button(text, x, y, w, h, hover=False):
+    color = GREEN if hover else GRAY
+    pygame.draw.rect(screen, color, (x, y, w, h), border_radius=10)
+#kết thúc xử lí client với server
