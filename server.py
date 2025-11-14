@@ -42,5 +42,26 @@ def handle_game(player1, player2):
                     if msg["action"] == "play_again":
                         play_again_count += 1
                     elif msg["action"] == "report_result":
-                        print(f"[RESULT] Client b�o c�o: {msg}")
+                        print(f"[RESULT] Client b�o c�o: {msg}")
 # ket thuc connect client toi server
+                except (ConnectionResetError, json.JSONDecodeError):
+                    other = player2 if player == player1 else player1
+                    other.send(json.dumps({"action": "opponent_disconnected"}).encode())
+                    return
+
+        handle_game(player1, player2)
+
+    except Exception as e:
+        print(f"Lỗi trong trận đấu: {e}")
+    finally:
+
+        try:
+            player1.close()
+            player2.close()
+        except:
+            pass
+
+
+def handle_client(client_socket):
+    with lock:
+        waiting_queue.append(client_socket)
