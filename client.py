@@ -194,3 +194,54 @@ while running:
             elif state == "result":
                 if 300 <= mouse_x <= 500 and 420 <= mouse_y <= 470:
                     send_message({"action": "play_again"})
+                    state = "waiting"
+                    choice = None
+                    opponent_choice = None
+                    result = None
+                    fade_alpha = 0
+
+    fade_in_out()
+
+    screen.blit(player_left_idle, (50, HEIGHT-200))
+    screen.blit(player_right_idle, (WIDTH-200, HEIGHT-200))
+
+
+    if choice:
+        draw_choice(choice, (200, HEIGHT-250))
+    if opponent_choice:
+        draw_choice(opponent_choice, (WIDTH-300, HEIGHT-250))
+
+
+    if state == "waiting":
+        txt = font.render("Đang chờ đối thủ...", True, BLACK)
+        screen.blit(txt, (WIDTH//2 - txt.get_width()//2, HEIGHT//2))
+    elif state == "choosing":
+
+        for text, bx, by, bw, bh in choosing_buttons:
+            hover = bx <= mouse_x <= bx + bw and by <= mouse_y <= by + bh
+            draw_button(text, bx, by, bw, bh, hover)
+    elif state == "waiting_opponent":
+        txt = font.render("Đã chọn! Đợi đối thủ...", True, BLACK)
+        screen.blit(txt, (WIDTH//2 - txt.get_width()//2, HEIGHT//2))
+    elif state == "result":
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, fade_alpha))
+        screen.blit(overlay, (0, 0))
+        color = GREEN if result=="win" else RED if result=="lose" else BLUE
+        txt = font.render(f"{'THẮNG!' if result=='win' else 'THUA!' if result=='lose' else 'HOÀ!'}", True, color)
+        screen.blit(txt, (WIDTH//2 - txt.get_width()//2, 100))
+        draw_button("Chơi lại", 300, 420, 200, 50)
+    elif state == "disconnected":
+        txt = font.render("Đối thủ đã thoát!", True, RED)
+        screen.blit(txt, (WIDTH//2 - txt.get_width()//2, HEIGHT//2))
+
+
+    score_txt = small_font.render(f"Thắng: {scores['win']} | Thua: {scores['lose']} | Hoà: {scores['draw']}", True, (0, 255, 255))
+    screen.blit(score_txt, (10,10))
+
+    pygame.display.flip()
+    clock.tick(FPS)
+
+client_socket.close()
+pygame.quit()
+sys.exit()

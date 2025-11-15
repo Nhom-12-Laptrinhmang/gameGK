@@ -86,3 +86,23 @@ def handle_client(client_socket):
 
     with lock:
         waiting_queue.append(client_socket)
+        if len(waiting_queue) >= 2:
+            player1 = waiting_queue.pop(0)
+            player2 = waiting_queue.pop(0)
+            threading.Thread(target=handle_game, args=(player1, player2)).start()
+
+
+def main():
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind((HOST, PORT))
+    server.listen(5)
+    print(f"Server đang lắng nghe trên {HOST}:{PORT}")
+
+    while True:
+        client_socket, addr = server.accept()
+        print(f"Kết nối từ {addr}")
+        threading.Thread(target=handle_client, args=(client_socket,)).start()
+
+
+if __name__ == "__main__":
+    main()
