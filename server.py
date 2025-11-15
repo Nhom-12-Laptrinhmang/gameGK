@@ -20,7 +20,28 @@ def handle_game(player1, player2):
         while len(choices) < 2:
 
             for player in [player1, player2]:
-#connect client tiws server     
+                try:
+                    data = player.recv(1024).decode()
+                    if not data:
+                        raise ConnectionResetError
+                    msg = json.loads(data)
+                    if msg["action"] == "choose":
+                        choices[player] = msg["choice"]
+                    elif msg["action"] == "report_result":
+                        print(f"[RESULT] Client báo cáo: {msg}")
+                except (ConnectionResetError, json.JSONDecodeError):
+               
+                    other = player2 if player == player1 else player1
+                    other.send(json.dumps({"action": "opponent_disconnected"}).encode())
+                    return
+
+
+        p1_choice = choices[player1]
+        p2_choice = choices[player2]
+        if p1_choice == p2_choice:
+            result1, result2 = "draw", "draw"
+        elif (p1_choice == "rock" and p2_choice == "scissors") or \
+                (p1_choice == "paper" and p2_choice == "rock") or \
                 (p1_choice == "scissors" and p2_choice == "paper"):
             result1, result2 = "win", "lose"
         else:
@@ -42,8 +63,7 @@ def handle_game(player1, player2):
                     if msg["action"] == "play_again":
                         play_again_count += 1
                     elif msg["action"] == "report_result":
-                        print(f"[RESULT] Client b�o c�o: {msg}")
-# ket thuc connect client toi server
+                        print(f"[RESULT] Client báo cáo: {msg}")
                 except (ConnectionResetError, json.JSONDecodeError):
                     other = player2 if player == player1 else player1
                     other.send(json.dumps({"action": "opponent_disconnected"}).encode())
@@ -63,5 +83,6 @@ def handle_game(player1, player2):
 
 
 def handle_client(client_socket):
+
     with lock:
         waiting_queue.append(client_socket)
