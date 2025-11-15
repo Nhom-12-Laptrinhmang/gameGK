@@ -47,6 +47,104 @@ def load_image(name, scale=None):
 
 try:
     bg_img = load_image("background.png", (WIDTH, HEIGHT))
+    player_left_idle = load_image("player_left_idle.png", (150, 150))
+    player_right_idle = load_image("player_right_idle.png", (150, 150))
+    rock_img = load_image("rock.png", (80, 80))
+    paper_img = load_image("paper.png", (80, 80))
+    scissors_img = load_image("scissors.png", (80, 80))
+    win_sound = pygame.mixer.Sound(os.path.join(ASSETS_DIR, "win.mp3"))
+    lose_sound = pygame.mixer.Sound(os.path.join(ASSETS_DIR, "lose.mp3"))
+    draw_sound = pygame.mixer.Sound(os.path.join(ASSETS_DIR, "draw.mp3"))
+except Exception as e:
+    print("Lỗi load assets:", e)
+    sys.exit()
+
+
+state = "waiting"
+choice = None
+opponent_choice = None
+result = None
+scores = {"win": 0, "lose": 0, "draw": 0}
+fade_alpha = 0
+
+
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+    client_socket.connect((HOST, PORT))
+except Exception as e:
+    print("Không thể kết nối server:", e)
+    sys.exit()
+
+
+choice_map = {"Búa": "rock", "Bao": "paper", "Kéo": "scissors"}
+reverse_choice_map = {v: k for k, v in choice_map.items()}
+
+
+def send_message(msg):
+    try:
+        client_socket.send(json.dumps(msg).encode())
+        print(f"[DEBUG] Đã gửi tới server: {msg}")
+    except:
+        pass
+
+
+def receive_messages():
+    global state, opponent_choice, result
+    while True:
+        try:
+            data = client_socket.recv(1024).decode()
+            if not data:
+                break
+            msg = json.loads(data)
+            print(f"[DEBUG] Nhận từ server: {msg}")
+            if msg["action"] == "start":
+                state = "choosing"
+            elif msg["action"] == "result":
+                state = "result"
+                result = msg["result"]
+                opponent_choice = reverse_choice_map.get(msg["opponent"], msg["opponent"])
+                scores[result] += 1
+                print(f"[INFO] Kết quả: Bạn {'THẮNG' if result=='win' else 'THUA' if result=='lose' else 'HOÀ'} | Đối thủ chọn {opponent_choice}")
+
+
+                try:
+                    send_message({
+                        "action": "report_result",
+                        "your_choice": choice_map[choice],
+                        "opponent_choice": msg["opponent"],
+                        "result": result
+                    })
+                    print("[DEBUG] Đã gửi kết quả về server")
+                except:
+                    print("[ERROR] Không thể gửi kết quả về server")
+
+                if result == "win":
+                    win_sound.play()
+                elif result == "lose":
+                    lose_sound.play()
+                else:
+                    draw_sound.play()
+            elif msg["action"] == "opponent_disconnected":
+                state = "disconnected"
+                print("[INFO] Đối thủ đã thoát!")
+        except:
+            break
+
+threading.Thread(target=receive_messages, daemon=True).start()
+
+
+symbol_images = {"Kéo": scissors_img, "Búa": rock_img, "Bao": paper_img}
+
+def fade_in_out():
+    global fade_alpha
+    if state == "result":
+        fade_alpha = min(200, fade_alpha + 10)
+    else:
+        fade_alpha = max(0, fade_alpha - 10)
+
+def draw_button(text, x, y, w, h, hover=False):
+    color = GREEN if hover else GRAY
+    pygame.draw.rect(screen, color, (x, y, w, h), border_radius=10)
     pygame.draw.rect(screen, BLACK, (x, y, w, h), 2, border_radius=10)
     txt = font.render(text, True, BLACK)
     screen.blit(txt, (x + w//2 - txt.get_width()//2, y + h//2 - txt.get_height()//2))
